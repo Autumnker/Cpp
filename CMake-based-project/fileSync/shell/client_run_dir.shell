@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# 跨主机单个文件同步客户端
+# echo "跨主机单个文件同步客户端"
+# ./bin/socketSingleFileSync_client_main $1 $2 $3 $4
+
+# 跨主机文件夹同步客户端
+ echo "跨主机文件夹同步客户端"
+ ./bin/socketDirSync_client_main $1 $2 $3 $4

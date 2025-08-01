@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# gcc hostFileSync_main.c utils.c data_structure.c hostSingleFileSync.c -o hostFileSync;
+# gcc utils.c data_structure.c  hostDirSync.c hostDirSync_main.c hostSingleFileSync.c -o hostDirSync;
+
+rm ./bin/*
+echo "./bin 目录下的可执行文件被删除"
+
+mkdir build
+echo  "创建build目录"
+
+cd build
+cmake ..
+make
+cd ..
+rm -r build
+echo "删除build目录"
+

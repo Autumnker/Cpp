@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# 递归遍历当前目录及子目录，将所有文件添加 .txt 后缀
+while IFS= read -r -d '' file; do
+    if [[ "$file" != *.txt ]]; then
+        mv -- "$file" "${file}.txt"
+        echo "Renamed: $file -> ${file}.txt"
+    fi
+done < <(find . -type f -print0)

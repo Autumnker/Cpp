@@ -1,0 +1,20 @@
+{
+    "files.associations": {
+        "*.cpp": "cpp",
+        "socketsinglefilesync_server.h": "c",
+        "array": "c",
+        "string": "c",
+        "string_view": "c",
+        "system_error": "c",
+        "data_structure.h": "c",
+        "socketsinglefilesync_client.h": "c",
+        "fstream": "c",
+        "unistd.h": "c",
+        "stdio.h": "c",
+        "socketdirsync_server.h": "c",
+        "utils.h": "c",
+        "hostdirsync.h": "c",
+        "socketdirsync_client.h": "c",
+        "inet.h": "c"
+    }
+}

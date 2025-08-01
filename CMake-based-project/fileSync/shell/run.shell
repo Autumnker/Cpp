@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# 向./debug/src.txt中写入数据
+# gcc input_to_src.c -o input_to_src; ./input_to_src;
+
+# 本机单个文件同步
+# echo "本机单个文件同步"
+# ./bin/hostSingleFileSync_main $1 $2
+
+# 本机文件夹同步
+# echo "本机文件夹同步"
+# ./bin/hostDirSync_main $1 $2
+
+# 跨主机单个文件调试
+. generate.shell;. server_run.shell;

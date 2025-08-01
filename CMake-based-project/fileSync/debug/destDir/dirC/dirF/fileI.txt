@@ -1,0 +1,45 @@
+hqyj@ubuntu:~/hqyj_peixun/class_note/step-6/note/day0724/CMake-based-project/fileSync$
+hqyj@ubuntu:~/hqyj_peixun/class_note/step-6/note/day0724/CMake-based-project/fileSync$
+hqyj@ubuntu:~/hqyj_peixun/class_note/step-6/note/day0724/CMake-based-project/fileSync$
+hqyj@ubuntu:~/hqyj_peixun/class_note/step-6/note/day0724/CMake-based-project/fileSync$ .
+ server_run.shell 
+跨主机文件夹同步服务器
+Server listening on 192.168.80.128:8080...
+客户端:成功收到文件数组大小
+客户端:成功接收到文件路径数组
+bklist_insert: hex < 0
+send_content_to_client/bklist_updateByFile: Success
+子进程43490已退出,退出状态为256
+^C
+hqyj@ubuntu:~/hqyj_peixun/class_note/step-6/note/day0724/CMake-based-project/fileSync$ . server_run.shell 
+跨主机文件夹同步服务器
+Server listening on 192.168.80.128:8080...
+客户端:成功收到文件数组大小
+客户端:成功接收到文件路径数组
+---dirC/dirF/fileI---正在同步……
+---dirC/dirF/fileI---同步完成
+---dirC/dirF/fileI---正在同步……
+---dirC/dirF/fileI---同步完成
+---dirC/dirF/fileI---正在同步……
+---dirC/dirF/fileI---同步完成
+---dirC/dirF/fileI---正在同步…… server_run.shell 
+跨主机文件夹同步服务器
+Server listening on 192.168.80.128:8080...
+客户端:成功收到文件数组大小
+客户端:成功接收到文件路径数组
+bklist_insert: hex < 0
+send_content_to_client/bklist_updateByFile: Success
+子进程43490已退出,退出状态为256
+^C
+hqyj@ubuntu:~/hqyj_peixun/class_note/step-6/note/day0724/CMake-based-project/fileSync$ . server_run.shell 
+跨主机文件夹同步服务器
+Server listening on 192.168.80.128:8080...
+客户端:成功收到文件数组大小
+客户端:成功接收到文件路径数组
+---dirC/dirF/fileI---正在同步……
+---dirC/dirF/fileI---同步完成
+---dirC/dirF/fileI---正在同步……
+---dirC/dirF/fileI---同步完成
+---dirC/dirF/fileI---正在同步……
+---dirC/dirF/fileI---同步完成
+---dirC/dirF/fileI---正在同步……
