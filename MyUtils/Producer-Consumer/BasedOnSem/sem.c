@@ -17,12 +17,16 @@ typedef struct Node {
 Node* head = NULL;
 
 // 工具函数
-void printList(Node* head, int flag) {
-    char* addLine = "++++++++++++++++++++++++++++++++++++++++++";
-    char* subLine = "------------------------------------------";
+void printList(Node* head, int flag, pthread_t ppid) {
+    char addLine[64];
+    char subLine[64];
+    sprintf(addLine, "%lu : ++++++++++++++++++++++++++++++", ppid);
+    sprintf(subLine, "%lu : ------------------------------", ppid);
+
     if (flag == 0) {
         printf("%s\n", addLine);
-    } else {
+    }
+    else {
         printf("%s\n", subLine);
     }
 
@@ -30,7 +34,8 @@ void printList(Node* head, int flag) {
     while (curr != NULL) {
         if (curr->next != NULL) {
             printf("%d -> ", curr->val);
-        } else {
+        }
+        else {
             printf("%d\n", curr->val);
         }
         curr = curr->next;
@@ -38,13 +43,15 @@ void printList(Node* head, int flag) {
 
     if (flag == 0) {
         printf("%s\n", addLine);
-    } else {
+    }
+    else {
         printf("%s\n", subLine);
     }
 }
 
 // 生产者
 void* producer(void* arg) {
+    srand(time(NULL) ^ pthread_self());
     while (1) {
         sem_wait(&prodSem);
         pthread_mutex_lock(&mutex);
@@ -53,13 +60,13 @@ void* producer(void* arg) {
         Node* node = (Node*)malloc(sizeof(Node));
         node->val = rand() % 100;
         node->next = head;
-        
+
         // 更新头节点
         head = node;
 
         // 打印当前链表
-        printList(head, 0);
-        
+        printList(head, 0, pthread_self());
+
         pthread_mutex_unlock(&mutex);
         sem_post(&consSem);
 
@@ -76,7 +83,7 @@ void* consumer(void* arg) {
         pthread_mutex_lock(&mutex);
 
         // 打印链表
-        printList(head, 1);
+        printList(head, 1, pthread_self());
 
         // 消费
         node = head;
@@ -99,7 +106,8 @@ int main(int argc, char const* argv[]) {
     int producer_num = 0;
     int consumer_num = 0;
 
-    // 初始化信号量
+    // 初始化互斥锁\信号量
+    pthread_mutex_init(&mutex, NULL);
     sem_init(&prodSem, 0, PTHREAD_NUM);
     sem_init(&consSem, 0, 0);
 
