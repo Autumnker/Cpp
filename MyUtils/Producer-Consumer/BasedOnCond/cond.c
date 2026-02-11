@@ -15,12 +15,16 @@ typedef struct Node {
 Node* head = NULL;
 
 // 工具函数
-void printList(Node* head, int flag) {
-    char* addLine = "++++++++++++++++++++++++++++++++++++++++++";
-    char* subLine = "------------------------------------------";
+void printList(Node* head, int flag, pthread_t ppid) {
+    char addLine[64];
+    char subLine[64];
+    sprintf(addLine, "%lu : ++++++++++++++++++++++++++++++", ppid);
+    sprintf(subLine, "%lu : ------------------------------", ppid);
+
     if (flag == 0) {
         printf("%s\n", addLine);
-    } else {
+    }
+    else {
         printf("%s\n", subLine);
     }
 
@@ -28,7 +32,8 @@ void printList(Node* head, int flag) {
     while (curr != NULL) {
         if (curr->next != NULL) {
             printf("%d -> ", curr->val);
-        } else {
+        }
+        else {
             printf("%d\n", curr->val);
         }
         curr = curr->next;
@@ -36,13 +41,15 @@ void printList(Node* head, int flag) {
 
     if (flag == 0) {
         printf("%s\n", addLine);
-    } else {
+    }
+    else {
         printf("%s\n", subLine);
     }
 }
 
 // 生产者
 void* producer(void* arg) {
+    srand(time(NULL) ^ pthread_self());
     while (1) {
         pthread_mutex_lock(&mutex);
 
@@ -54,15 +61,15 @@ void* producer(void* arg) {
         // 更新头节点
         head = node;
 
-        pthread_mutex_unlock(&mutex);
-
         // 打印当前链表
-        printList(head, 0);
+        printList(head, 0, pthread_self());
 
         // 唤醒条件变量
-        pthread_cond_broadcast(&cond);
+        pthread_cond_signal(&cond);
 
-        sleep(1);
+        pthread_mutex_unlock(&mutex);
+        
+        usleep(900000);
     }
     pthread_exit(0);
 }
@@ -86,7 +93,12 @@ void* consumer(void* arg) {
         pthread_mutex_unlock(&mutex);
 
         // 打印链表
-        printList(head, 1);
+        if (head != NULL) {
+            printList(head, 1, pthread_self());
+        }
+        else {
+            printf("head is NULL\n");
+        }
 
         usleep(400000);
     }
@@ -95,6 +107,9 @@ void* consumer(void* arg) {
 
 #define PTHREAD_NUM 5
 int main(int argc, char const* argv[]) {
+    pthread_mutex_init(&mutex, NULL);
+    pthread_cond_init(&cond, NULL);
+
     // 创建数组
     pthread_t p[PTHREAD_NUM];
     pthread_t c[PTHREAD_NUM];
