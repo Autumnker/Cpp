@@ -1,1 +1,5 @@
 **/.vscode/
+**/.vs/
+**/.idea/
+**/x64/
+**/*.vcxproj.user
