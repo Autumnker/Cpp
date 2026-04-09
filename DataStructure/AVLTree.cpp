@@ -1,5 +1,6 @@
 #include <iostream>
 #include <algorithm>
+#include <vector>
 #include <queue>
 
 using namespace std;
@@ -288,15 +289,27 @@ public:
 
     // 层序遍历
     void levelOrderTraversal() {
+        queue<avlTreeNode*> que;
+        que.push(_root);
 
+        while (!que.empty()) {
+            avlTreeNode* node = que.front(); que.pop();
+
+            if (node != _root) { cout << "->"; }
+            cout << node->_data;
+
+            if (node->_left) { que.push(node->_left); }
+            if (node->_right) { que.push(node->_right); }
+        }
+        cout << endl;
     }
 };
 
 
 #include <time.h>
 #include <random>
-#include <vector>
 #include <unordered_set>
+
 int main(int argc, char const* argv[])
 {
     int n;
@@ -331,6 +344,8 @@ int main(int argc, char const* argv[])
     avlTree.Traversal(AVLTree::Traversal::InOrder);
     cout << "PostOrder : ";
     avlTree.Traversal(AVLTree::Traversal::PostOrder);
+    cout << "LevelOrder : ";
+    avlTree.levelOrderTraversal();
 
     // 删除测试
     cout << "Delete " << dataToDelete << ": ";
