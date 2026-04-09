@@ -1,6 +1,6 @@
 #include <iostream>
 #include <algorithm>
-#include <vector>
+#include <queue>
 
 using namespace std;
 
@@ -42,7 +42,7 @@ private:
 //    / \      / \
 //   L2  R1    L1  L2
 
-    avlTreeNode* leftRoat(avlTreeNode* root) {
+    avlTreeNode* leftRotation(avlTreeNode* root) {
         avlTreeNode* node = root->_right;
         root->_right = node->_left;
         node->_left = root;
@@ -59,7 +59,7 @@ private:
 //  / \           / \
 // L1  R2         R2  R1 
 
-    avlTreeNode* rightRoat(avlTreeNode* root) {
+    avlTreeNode* rightRotation(avlTreeNode* root) {
         avlTreeNode* node = root->_left;
         root->_left = node->_right;
         node->_right = root;
@@ -74,59 +74,136 @@ private:
 
         // LL 右旋
         if (getBalanceFactor(root) > 1 && getBalanceFactor(root->_left) > 0) {
-            root = rightRoat(root);
+            root = rightRotation(root);
         }
 
         // LR 先左旋再右旋
         else if (getBalanceFactor(root) > 1 && getBalanceFactor(root->_left) < 0) {
-            root->_left = leftRoat(root->_left);
-            root = rightRoat(root);
+            root->_left = leftRotation(root->_left);
+            root = rightRotation(root);
         }
 
         // RR 左旋
         else if (getBalanceFactor(root) < -1 && getBalanceFactor(root->_right) < 0) {
-            root = leftRoat(root);
+            root = leftRotation(root);
         }
 
         // RL 先右旋再左旋转
         else if (getBalanceFactor(root) < -1 && getBalanceFactor(root->_right) > 0) {
-            root->_right = rightRoat(root->_right);
-            root = leftRoat(root);
+            root->_right = rightRotation(root->_right);
+            root = leftRotation(root);
         }
 
         return root;
     }
 
     // 插入单个节点
-    avlTreeNode* insertNode(avlTreeNode* parent, int data) {
-        if (!parent) {
+    avlTreeNode* insertNode(avlTreeNode* node, int data) {
+        if (!node) {
             return new avlTreeNode(data);
         }
 
-        if (data < parent->_data) {
-            parent->_left = insertNode(parent->_left, data);
+        if (data < node->_data) {
+            node->_left = insertNode(node->_left, data);
         }
-        else if (data > parent->_data) {
-            parent->_right = insertNode(parent->_right, data);
+        else if (data > node->_data) {
+            node->_right = insertNode(node->_right, data);
         }
         else {
-            return parent;
+            return node;
         }
 
-        return balance(parent);
+        return balance(node);
+    }
+
+    // 删除节点
+    avlTreeNode* _deleteNode(avlTreeNode* node, int data) {
+        if (!node) { return nullptr; }
+        if (data < node->_data) {
+            node->_left = _deleteNode(node->_left, data);
+        }
+        else if (data > node->_data) {
+            node->_right = _deleteNode(node->_right, data);
+        }
+        else {
+            // 找到节点,判断其子节点数量
+
+            // node是叶子节点或只有一个子节点
+            if (!node->_left || !node->_right) {
+                avlTreeNode* tmp = node->_left ? node->_left : node->_right;
+                delete node;
+                return tmp;
+            }
+
+            // 有两个子节点
+            else {
+                // 这里可以用左子树的最大节点或者右子树的最小节点替换node的位置,我选择前者
+                avlTreeNode* leftMax = node->_left;
+                while (leftMax->_right) {
+                    leftMax = leftMax->_right;
+                }
+
+                node->_data = leftMax->_data;
+
+                node->_left = _deleteNode(node->_left, leftMax->_data);
+            }
+        }
+        return balance(node);
+    }
+
+    // 查询节点
+    avlTreeNode* _searchNode(avlTreeNode* node, int data) {
+        if (!node) {
+            return nullptr;
+        }
+
+        if (data < node->_data) {
+            return _searchNode(node->_left, data);
+        }
+        else if (data > node->_data) {
+            return _searchNode(node->_right, data);
+        }
+        return node;
+    }
+
+    // 销毁整棵树
+    void _destory(avlTreeNode* node) {
+        if (!node) { return; }
+        _destory(node->_left);
+        _destory(node->_right);
+        delete node;
     }
 
     // BST先序遍历
-    void _preorderTraversal(avlTreeNode* node) {
+    void _preorderTraversal(avlTreeNode* node, avlTreeNode* startNode) {
         if (!node) { return; }
-        if (node != _root) { cout << "->"; }
-        cout << node->_data;
-        _preorderTraversal(node->_left);
-        _preorderTraversal(node->_right);
+        if (node != startNode) { cout << "->"; }
+        cout << node->_data << " ";
+        _preorderTraversal(node->_left, startNode);
+        _preorderTraversal(node->_right, startNode);
+    }
+    // BST中序遍历
+    void _inOrderTraversal(avlTreeNode* node, avlTreeNode* startNode) {
+        if (!node) { return; }
+        _inOrderTraversal(node->_left, startNode);
+        if (node != startNode) { cout << "->"; }
+        cout << node->_data << " ";
+        _inOrderTraversal(node->_right, startNode);
+    }
+    // BST后序遍历
+    void _postOrderTraversal(avlTreeNode* node, avlTreeNode* startNode) {
+        if (!node) { return; }
+        _postOrderTraversal(node->_left, startNode);
+        _postOrderTraversal(node->_right, startNode);
+        if (node != startNode) { cout << "->"; }
+        cout << node->_data << " ";
     }
 
 public:
     AVLTree() :_root(nullptr) {}
+    ~AVLTree() {
+        destory();
+    }
 
     // 插入一个节点
     void insertSingleNode(int data) {
@@ -141,45 +218,129 @@ public:
     }
 
     // 删除节点
+    void deleteNode(int data) {
+        if (searchNode(data)) {
+            _root = _deleteNode(_root, data);
+        }
+        else {
+            cout << "data: " << data << " not found" << endl;
+        }
+    }
 
     // 查询节点
+    bool searchNode(int data) {
+        if (_searchNode(_root, data)) {
+            return true;
+        }
+        return false;
+    }
 
     // 修改节点(先删后插)
+    void updateNode(int oldData, int newData) {
+        deleteNode(oldData);
+        insertSingleNode(newData);
+    }
 
     // 销毁整棵树
+    void destory() {
+        _destory(_root);
+        _root = nullptr;
+    }
 
-    // 遍历树(先序)
+    // 先序遍历
     void preorderTraversal() {
-        _preorderTraversal(_root);
+        avlTreeNode* startNode = _root;
+        _preorderTraversal(_root, startNode);
+        puts("");
+    }
+    // 中序遍历
+    void inOrderTraversal() {
+        avlTreeNode* startNode = _root;
+        while (startNode->_left) { startNode = startNode->_left; }
+        _inOrderTraversal(_root, startNode);
+        puts("");
+
+    }
+    // 后序遍历
+    void postOrderTraversal() {
+        avlTreeNode* startNode = _root;
+        while (startNode->_left) { startNode = startNode->_left; }
+        _postOrderTraversal(_root, startNode);
+        puts("");
+    }
+    enum class Traversal { PreOrder, InOrder, PostOrder };
+    // 遍历
+    void Traversal(Traversal order) {
+        switch (order) {
+        case Traversal::PreOrder:
+            preorderTraversal();
+            break;
+        case Traversal::InOrder:
+            inOrderTraversal();
+            break;
+        case Traversal::PostOrder:
+            postOrderTraversal();
+            break;
+        default:
+            cout << __FILE__ << "Parameter error" << endl;
+        }
     }
 
     // 层序遍历
+    void levelOrderTraversal() {
 
-
+    }
 };
 
 
 #include <time.h>
 #include <random>
+#include <vector>
+#include <unordered_set>
 int main(int argc, char const* argv[])
 {
     int n;
+    int dataToDelete;
+    int dataToSearch;
     cin >> n;
 
     AVLTree avlTree;
+    unordered_set<int> number_set;
     vector<int> arr;
 
     srand(time(0));
-    for (int i = 0; i < n; ++i) {
-        arr.push_back(rand() % n + 1);
+    while (number_set.size() < n) {
+        number_set.insert(rand() % (2 * n) + 1);
     }
-    for (int i = 0; i < n; ++i) {
-        cout << arr[i] << " ";
+    for (auto it = number_set.begin(); it != number_set.end(); ++it) {
+        arr.push_back(*it);
+        cout << *it << " ";
     }
-    cout << endl;
+    puts("");
 
+    cout << "Input the data of the node to be deleted : ";
+    cin >> dataToDelete;
+
+    // 插入测试
     avlTree.insertBatchNodes(arr);
+
+    // 遍历测试
+    cout << "PreOrder : ";
+    avlTree.Traversal(AVLTree::Traversal::PreOrder);
+    cout << "InOrder : ";
+    avlTree.Traversal(AVLTree::Traversal::InOrder);
+    cout << "PostOrder : ";
+    avlTree.Traversal(AVLTree::Traversal::PostOrder);
+
+    // 删除测试
+    cout << "Delete " << dataToDelete << ": ";
+    avlTree.deleteNode(dataToDelete);
+    cout << "PreOrder : ";
     avlTree.preorderTraversal();
+
+    cout << "Inpute the data you want to search : ";
+    cin >> dataToSearch;
+    cout << avlTree.searchNode(dataToSearch) << endl;
 
     return 0;
 }
