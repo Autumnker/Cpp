@@ -3,9 +3,9 @@
 #include "ThreadPool.h"
 
 void DirSize::traverseDirectory(const std::string& directoryPath, uintmax_t& fileSize, int& fileCount) {
-	ThreadPool pool;	// ´´½¨Ïß³Ì³Ø¶ÔÏó
-	atomic<uintmax_t> totalSize;
-	atomic<int> totalCount;
+	ThreadPool pool;	// åˆ›å»ºçº¿ç¨‹æ± å¯¹è±¡
+	atomic<uintmax_t> totalSize = 0;
+	atomic<int> totalCount = 0;
 
 	try {
 		for (const auto& entry : fs::recursive_directory_iterator(directoryPath)) {
@@ -13,12 +13,12 @@ void DirSize::traverseDirectory(const std::string& directoryPath, uintmax_t& fil
 				fs::path filePath = entry.path();
 				pool.addTask([filePath, &totalSize, &totalCount]() {
 					try {
-						// Ô­×ÓÔö¼Ó×Ü´óĞ¡ºÍÎÄ¼ş¼ÆÊı
+						// åŸå­å¢åŠ æ€»å¤§å°å’Œæ–‡ä»¶è®¡æ•°
 						totalSize += fs::file_size(filePath);
 						++totalCount;
 					}
 					catch (const fs::filesystem_error& e) {
-						std::cerr << "ÎŞ·¨»ñÈ¡ÎÄ¼ş´óĞ¡: " << filePath << " - " << e.what() << std::endl;
+						std::cerr << "æ— æ³•è·å–æ–‡ä»¶å¤§å°: " << filePath << " - " << e.what() << std::endl;
 					}
 					});
 			}
@@ -31,12 +31,12 @@ void DirSize::traverseDirectory(const std::string& directoryPath, uintmax_t& fil
 		std::cerr << "Error: " << e.what() << std::endl;
 	}
 
-	// µÈ´ıËùÓĞÈÎÎñÍê³É
+	// ç­‰å¾…æ‰€æœ‰ä»»åŠ¡å®Œæˆ
 	while (pool.getActiveThreadNum() > 0) {
 		this_thread::sleep_for(chrono::milliseconds(500));
 	}
 
-	// ½«Öµ´«¸ø´«³ö±äÁ¿
+	// å°†å€¼ä¼ ç»™ä¼ å‡ºå˜é‡
 	fileSize = totalSize;
 	fileCount = totalCount;
 }
