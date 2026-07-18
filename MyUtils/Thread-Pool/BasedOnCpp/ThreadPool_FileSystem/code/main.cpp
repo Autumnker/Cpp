@@ -4,6 +4,7 @@
 #include <atomic>
 #include <mutex>
 #include <chrono>
+#include <fstream>
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -16,20 +17,31 @@ int main(int argc, char* argv[]) {
 		directoryPath.assign(absPath.string());
 	}
 	else {
-		directoryPath = R"(C:\Users\Public\AppData)";
+		directoryPath = R"(C:\Windows\WinSxS)";
 	}
 
-	// 初始化原子变量用于统计总大小和文件计数
+	// 遍历文件
 	uintmax_t totalSize(0);
-	int fileCount(0);
-
+	size_t fileCount(0);
+	std::chrono::time_point time_start = std::chrono::system_clock::now();
 	DirSize::traverseDirectory(directoryPath, totalSize, fileCount);
+	std::chrono::time_point time_finish = std::chrono::system_clock::now();
+	std::chrono::duration<double> elapsed = time_finish - time_start;
+
+	// 输出日志
+	std::ofstream ofs("./log.md", std::ios::trunc);
+	ofs << "[visited]" << '\n';
+	for (const auto& path : path_visited) { ofs << path << '\n'; }
+	ofs << "[denied]" << '\n';
+	for (const auto& path : path_denied) { ofs << path << '\n'; }
+	ofs.close();
 
 	// 输出最终结果
 	cout << "\n统计完成!" << endl;
 	cout << "路径为： " << directoryPath << endl;
 	cout << "总文件数： " << fileCount << endl;
 	cout << "总大小： " << totalSize << " 字节 (" << fixed << setprecision(4) << totalSize / (1024.0 * 1024.0) << " MB)" << endl;
+	std::cout << "共耗时：" << elapsed.count() << " 秒" << std::endl;
 
 	return 0;
 }

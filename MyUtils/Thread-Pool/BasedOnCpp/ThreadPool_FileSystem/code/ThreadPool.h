@@ -35,18 +35,21 @@ using namespace std;
 
 class ThreadPool {
 public:
-	ThreadPool(int minThreadNum = 2, int maxThreadNum = thread::hardware_concurrency() * 2, int inspFrequency_sec = 1);
+	ThreadPool(int minThreadNum = 2,
+		int maxThreadNum = thread::hardware_concurrency() * 2,
+		int inspFrequency_ms = 10);
 	~ThreadPool();
 
 	void addTask(function<void(void)> task);		// 向任务队列中添加任务
 	int getActiveThreadNum();						// 获取活动线程数量
+	void waitAll();						// 等待所有任务完成
 
 private:
 	void manager();									// 管理者函数
 	void worker();									// 工作函数
 
 private:
-	thread* _manager_th;							// 管理者线程
+	shared_ptr<thread> _manager_th;							// 管理者线程
 	map<thread::id, thread> _workers_th;			// 工作线程容器
 	vector<thread::id> _exitThreadIDs;				// 即将被销毁的线程id
 	queue<function<void(void)>> _taskQueue;			// 任务队列(可调用对象)<互斥资源>
@@ -61,5 +64,5 @@ private:
 	atomic<int> _liveThreadNum;						// 存活线程数量
 	atomic<int> _exitThreadNum;						// 退出线程数量
 	atomic<bool> _stopPool;							// 线程池是否关闭
-	int _inspFrequency_sec;							// 管理者线程检测频率(秒/次)
+	int _inspFrequency_ms;							// 管理者线程检测频率(ms)
 };

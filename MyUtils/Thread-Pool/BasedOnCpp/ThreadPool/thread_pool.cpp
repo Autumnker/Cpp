@@ -69,6 +69,7 @@ Thread_Pool::~Thread_Pool() {
  */
 void Thread_Pool::addTask(function<void(void)> task) {
     {
+        if (stop_thread_pool.load()) { return; }   // 线程池关闭则无法插入任务
         lock_guard<mutex> lock(task_queue_mutex);
         task_queue.push(move(task));
     }
@@ -144,6 +145,10 @@ void Thread_Pool::manager() {
             lock_guard<mutex> thread_exit_locker(thread_exit_mutex);
             num_alive = thread_num_alive;
             num_active = thread_num_active;
+#if DEBUG_LIGHT
+            lock_guard<mutex> io_locker(mutex_io);
+            cout << "num_alive " << num_alive << " | " << "num_active " << num_active << endl;
+#endif
 #if DEBUG_LOG
             lock_guard<mutex> io_locker(mutex_io);
             cout << "num_alive | num_active = " << num_alive << " | " << num_active << endl;

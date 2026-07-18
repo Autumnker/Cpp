@@ -12,5 +12,6 @@
 extern std::mutex mutex_io;
 
 // #define DEBUG_LOG 0
+// #define DEBUG_LIGHT 1
 
 #endif

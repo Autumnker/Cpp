@@ -43,7 +43,7 @@ class Thread_Pool {
 public:
     Thread_Pool(int thread_num_min = 2,                 // 最小线程数量默认 = 2
         int thread_num_max = thread::hardware_concurrency() * 2,  // 最大线程数量 = 硬件逻辑并发单元数量 * 2
-        int detection_frequency_ms = 100);
+        int detection_frequency_ms = 10);
     ~Thread_Pool();
 
     void addTask(function<void(void)> task);        // 添加任务
