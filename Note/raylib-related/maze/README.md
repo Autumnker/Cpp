@@ -16,9 +16,10 @@
 |------|------|------|------|
 | L4 组合根 | `main.cpp` | 组装具体实现并启动游戏 | 知道所有具体类 |
 | L3 应用层 | `app/` | `Game`：主循环、输入→逻辑、渲染编排 | 只依赖接口 |
-| L2 适配层 | `render/` `input/` `clock/` | `IRenderer`/`IInput`/`IClock` 的 raylib 实现 | raylib + core |
-| L1 核心领域 | `core/` | `Maze`/生成算法/`GameState`/`RobotAI` | **零外部依赖** |
-| 基础设施 | `common/` | `Logger` 日志 | 仅标准库 |
+| L2 适配层 | `render/` `input/` `clock/` | `IRenderer`/`IInput`/`IClock` 的 raylib 实现 | raylib + L0 共享类型 |
+| L1 核心领域 | `core/` | `Maze`/生成算法/`GameState`/`RobotAI` | **零外部依赖**，仅 L0 |
+| L0 共享词汇 | `core/types.hpp` | 通用值类型：`Position`/`Point`/`RGBA`/`pos_vec_t` | 仅标准库 |
+| 基础设施 | `common/` | `Logger`（横切工具，被各层写日志） | 仅标准库 |
 
 ## 架构图（依赖方向）
 
@@ -26,15 +27,15 @@
 
 ```mermaid
 graph TD
-    subgraph L4_组合根["L4 组合根 (main.cpp)"]
+    subgraph L4["L4 组合根 (main.cpp)"]
         MAIN["main()<br/>创建具体对象并注入"]
     end
 
-    subgraph L3_应用层["L3 应用层 (app/)"]
+    subgraph L3["L3 应用层 (app/)"]
         GAME["Game<br/>主循环 · 输入→逻辑 · 渲染编排"]
     end
 
-    subgraph L2_适配层["L2 适配层 (render/ input/ clock/)"]
+    subgraph L2["L2 适配层 (render/ · input/ · clock/)"]
         REN_I["IRenderer"]
         IN_I["IInput"]
         CLK_I["IClock"]
@@ -43,14 +44,19 @@ graph TD
         CLK["RaylibClock"]
     end
 
-    subgraph L1_核心层["L1 核心领域层 (core/) — 零外部依赖"]
-        MAZE["Maze / Position / Cell"]
+    subgraph L1["L1 核心领域层 (core/) — 零外部依赖"]
+        MAZE["Maze（只读 · 语义查询）"]
         GEN["IMazeGenerator<br/>RecursiveBacktrackerGenerator"]
         STATE["GameState"]
         ROBOT["RobotAI"]
     end
 
-    subgraph 外部库["外部库"]
+    subgraph L0["L0 共享词汇 + 基础设施"]
+        TYPES["core/types.hpp<br/>Position · Point · RGBA · pos_vec_t"]
+        LOG["common/ Logger<br/>横切工具（只写日志）"]
+    end
+
+    subgraph EXT["外部库"]
         RL["raylib"]
     end
 
@@ -74,6 +80,20 @@ graph TD
     GEN --> MAZE
     STATE --> MAZE
     ROBOT --> MAZE
+
+    %% 依赖最底层的共享词汇（人人可用，谁都不依赖它）
+    MAZE --> TYPES
+    GEN --> TYPES
+    STATE --> TYPES
+    ROBOT --> TYPES
+    REN_I --> TYPES
+    IN_I --> TYPES
+    CLK_I --> TYPES
+    GAME --> TYPES
+
+    %% 横切工具 Logger：任一层可写日志（此处略画代表两条）
+    GEN -. 写日志 .-> LOG
+    GAME -. 写日志 .-> LOG
 ```
 
 ## 构建与运行
@@ -126,6 +146,11 @@ g++ main.cpp core\*.cpp render\*.cpp input\*.cpp clock\*.cpp app\*.cpp common\*.
 ### 5. 单向"建议者"模式
 `RobotAI` 只根据世界状态**建议**一个移动方向（`suggest`），不直接修改玩家位置。是否执行由 `Game` 决定。这让机器人策略可以任意替换而不影响其他模块。
 
+### 6. 最底层：共享词汇 + 横切工具
+- `core/types.hpp` 是**全项目最底层的"通用词汇"**（`Position`/`Point`/`RGBA`/`pos_vec_t`）。任何层都能依赖它，而它不依赖任何人。比如 `input/` 只需要 `Point`，就只 include `types.hpp`，不必拖入整个迷宫领域。
+- `Maze` 对内部 `map_t` 完全封装，只暴露**语义查询**（`isInside`/`hasWall`/`rows`/`cols`/`start`/`target`），不再提供 `cells()`。渲染器、移动、寻路都通过查询"提问"，将来换内部存储也不会影响它们。
+- `common/Logger` 是**横切基础设施**：自身零项目依赖（只依赖标准库），所以即使被 `core` 调用也不会造成循环依赖或污染领域。它像一把"公共扳手"——谁都能用；若将来需要可替换的日志后端（文件/网络），再把它抽象成接口注入即可。
+
 ## 算法说明（教学）
 
 ### 递归回溯（生成迷宫 + 解路径）
@@ -147,5 +172,5 @@ g++ main.cpp core\*.cpp render\*.cpp input\*.cpp clock\*.cpp app\*.cpp common\*.
 ## 常见问题
 
 - **解路径拐角有缺口 / 机器人中途卡住**：多半是回溯逻辑错误（见"算法说明"），可用"遍历相邻对检查 `direction_between` 与 `hasWall`"的诊断程序验证。
-- **改了 `MazeConfig` 的 `rows/cols` 后起点/终点错乱**：`start/target` 不会自动跟随尺寸变化，请使用 `MazeConfig::create(rows, cols)`，或在 `generate()` 里已加入的越界校验会直接报错而非崩溃。
+- **改了 `MazeConfig` 的 `rows/cols` 后起点/终点错乱**：`start/target` 不会自动跟随尺寸变化，请用带参构造 `MazeConfig(rows, cols)` 创建（会自动计算默认起点/终点），或在 `generate()` 里已加入的越界校验会直接报错而非崩溃。
 - **窗口图标不显示**：图标按相对路径 `resources\maze_icon.png` 加载，需从项目根目录运行 `maze.exe`。

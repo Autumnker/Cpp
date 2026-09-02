@@ -21,14 +21,10 @@ struct MazeConfig
 
     MazeConfig() { updateDefaultLayout(); }
 
-    // 按指定尺寸创建配置（自动计算默认起点/终点：左下角 -> 右上角）
-    static MazeConfig create(int rows_, int cols_)
+    // 按指定尺寸构造（自动计算默认起点/终点：左下角 -> 右上角）
+    MazeConfig(int rows_, int cols_) : rows(rows_), cols(cols_)
     {
-        MazeConfig cfg;
-        cfg.rows = rows_;
-        cfg.cols = cols_;
-        cfg.updateDefaultLayout();
-        return cfg;
+        updateDefaultLayout();
     }
 
 private:

@@ -91,17 +91,16 @@ void RaylibRenderer::drawMarker(const Position& position, const RGBA& color, con
 
 void RaylibRenderer::drawMaze(const Maze& maze)
 {
-    const map_t& cells = maze.cells();
     Color wallColor = to_ray_color(config_.wallColor);
 
-    // 墙壁
+    // 墙壁：只通过语义查询 hasWall 逐格绘制，不依赖迷宫内部结构
     for (int row = 0; row < maze.rows(); ++row)
     {
         for (int col = 0; col < maze.cols(); ++col)
         {
             for (int d = Cell::Direction::UP; d < Cell::Direction::UN_KNOWN; ++d)
             {
-                if (!cells[row][col].wall[d]) { continue; }
+                if (!maze.hasWall(Position{ row, col }, static_cast<Cell::Direction>(d))) { continue; }
 
                 int x = config_.cellEdge * col + config_.offset;
                 int y = config_.cellEdge * row + config_.offset;

@@ -2,56 +2,20 @@
 #define __MAZE_HPP__
 
 /**
- * 核心领域层：纯 C++ 基础类型，不依赖任何外部库（raylib 等）。
- *  - Position  : 格子坐标
- *  - Point     : 像素/屏幕坐标
- *  - RGBA      : 与渲染后端无关的颜色
- *  - Cell      : 单个迷宫格子（四面墙 + 访问标记）
- *  - Maze      : 只读迷宫（格子 + 起点 + 终点）
+ * 核心领域层：迷宫领域类型。
+ *  - Cell     : 单个迷宫格子（四面墙 + 访问标记）
+ *  - map_t    : 二维格子容器
+ *  - Maze     : 只读迷宫（格子 + 起点 + 终点）
+ * 通用值类型（Position / Point / RGBA / pos_vec_t）见 types.hpp。
  */
 
+#include "types.hpp"
 #include <vector>
 #include <cstdlib>
 
 namespace maze {
 
-/* ------------------------- 基础类型 ------------------------- */
-
-struct Position
-{
-    int row = 0;
-    int col = 0;
-
-    Position() = default;
-    Position(int row_, int col_) : row(row_), col(col_) {}
-
-    bool operator==(const Position& other) const
-    {
-        return row == other.row && col == other.col;
-    }
-    bool operator!=(const Position& other) const
-    {
-        return !(*this == other);
-    }
-};
-
-// 像素/屏幕坐标
-struct Point
-{
-    int x = 0;
-    int y = 0;
-    Point() = default;
-    Point(int x_, int y_) : x(x_), y(y_) {}
-};
-
-// 颜色（不依赖 raylib）
-struct RGBA
-{
-    unsigned char r = 0;
-    unsigned char g = 0;
-    unsigned char b = 0;
-    unsigned char a = 255;
-};
+/* ------------------------- 迷宫格子 ------------------------- */
 
 struct Cell
 {
@@ -71,7 +35,6 @@ struct Cell
 /* ------------------------- 类型别名 ------------------------- */
 
 using map_t = std::vector<std::vector<Cell>>;
-using pos_vec_t = std::vector<Position>;
 
 /* ------------------------- 迷宫对象 ------------------------- */
 
@@ -99,7 +62,6 @@ public:
 
     int rows() const { return static_cast<int>(cells_.size()); }
     int cols() const { return cells_.empty() ? 0 : static_cast<int>(cells_[0].size()); }
-    const map_t& cells() const { return cells_; }
     const Position& start() const { return start_; }
     const Position& target() const { return target_; }
 

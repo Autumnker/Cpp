@@ -10,14 +10,20 @@
  */
 int main()
 {
+    int cell_edge = 12;
+    int rows = 680 / cell_edge;
+    int cols = 960 / cell_edge;
+
     maze::RenderConfig renderConfig;
+    renderConfig.cellEdge = cell_edge;
+    maze::MazeConfig mazeConfig(rows, cols);
 
     maze::RaylibRenderer renderer(renderConfig);
     maze::RaylibInput input;
     maze::RaylibClock clock;
     maze::RecursiveBacktrackerGenerator generator;
 
-    maze::Game game(generator, renderer, input, clock);
+    maze::Game game(generator, renderer, input, clock, mazeConfig);
     game.run();
     return 0;
 }

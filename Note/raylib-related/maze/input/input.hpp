@@ -6,7 +6,7 @@
  * Key 是语义化的按键，由具体实现（RaylibInput）映射到物理按键。
  */
 
-#include "maze.hpp"
+#include "types.hpp"
 
 namespace maze {
 
