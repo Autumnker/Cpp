@@ -238,6 +238,15 @@ int main(int argc, char const *argv[])
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE);
     SetTargetFPS(TARGET_FPS);
     SetExitKey(KEY_NULL);   // 默认按键"ESC"不退出
+
+    // 设置窗口图标（若资源存在）
+    Image icon = LoadImage("resources\\icon_timer.png");
+    if (icon.data != nullptr)
+    {
+        ImageFormat(&icon, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+        SetWindowIcon(icon);
+        UnloadImage(icon);
+    }
     
     while(!WindowShouldClose())
     {
