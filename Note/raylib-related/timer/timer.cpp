@@ -8,28 +8,42 @@
 #include "raylib.h"
 
 #define WINDOW_TITLE "Timer"
-#define WINDOW_WIDTH (1920 / 6)
-#define WINDOW_HEIGHT (1080 / 6)
+#define WINDOW_WIDTH (1920 / 5)
+#define WINDOW_HEIGHT (1080 / 5)
 #define TARGET_FPS 60
 
 static int time_out = 600;
 static int curr_count = time_out;
 static bool running = false;
-static bool reset = false;
+static bool lock_btn = false;
 
 struct Button
 {
+    enum ButtonState {
+        BTN_NORMAL,
+        BTN_HOVER,
+        BTN_PRESSED,
+        BTN_LOCKED,
+        BTN_STATE_SIZE,
+        BTN_UNKNOWN = BTN_STATE_SIZE
+    };
+
+    std::string label_;
     Vector2 pos_;
     float width_;
     float height_;
-    Button():pos_(std::move(Vector2{0.0f, 0.0f})),width_(0.0f),height_(0.0f){}
-    Button(Vector2 pos, float width, float height)
-    : pos_(pos),width_(width),height_(height){}
+
+    Button():label_(""),pos_(std::move(Vector2{0.0f, 0.0f})),width_(0.0f),height_(0.0f){}
+    Button(const char* label, Vector2 pos, float width, float height)
+    : label_(label), pos_(pos),width_(width),height_(height){}
 };
 
-Button btn_start{Vector2{WINDOW_WIDTH / 16 * 1, WINDOW_HEIGHT / 8 * 5}, WINDOW_WIDTH / 4, WINDOW_HEIGHT / 8 * 3};
-Button btn_pause{Vector2{WINDOW_WIDTH / 16 * 6, WINDOW_HEIGHT / 8 * 5}, WINDOW_WIDTH / 4, WINDOW_HEIGHT / 8 * 3};
-Button btn_reset{Vector2{WINDOW_WIDTH / 16 * 11, WINDOW_HEIGHT / 8 * 5}, WINDOW_WIDTH / 4, WINDOW_HEIGHT / 8 * 3};
+
+Button btn_start{"start", Vector2{WINDOW_WIDTH / 16 * 1, WINDOW_HEIGHT / 8 * 5}, WINDOW_WIDTH / 4, WINDOW_HEIGHT / 8 * 3};
+Button btn_pause{"pause", Vector2{WINDOW_WIDTH / 16 * 6, WINDOW_HEIGHT / 8 * 5}, WINDOW_WIDTH / 4, WINDOW_HEIGHT / 8 * 3};
+Button btn_reset{"reset", Vector2{WINDOW_WIDTH / 16 * 11, WINDOW_HEIGHT / 8 * 5}, WINDOW_WIDTH / 4, WINDOW_HEIGHT / 8 * 3};
+
+const Button btns[] = {btn_start, btn_pause, btn_reset};
 
 bool passed_seconds(int sec)
 {
@@ -61,7 +75,6 @@ bool passed_seconds(int sec)
     return false;
 }
 
-#include <iostream>
 bool is_hover(const Button& button, const Vector2& point)
 {
     if(!IsCursorOnScreen())
@@ -80,41 +93,26 @@ bool is_hover(const Button& button, const Vector2& point)
         return false;
 }
 
-bool button_clicked(const Button& button)
-{
-    Vector2 mouse_pos = GetMousePosition();
-    if(is_hover(button, mouse_pos) && IsMouseButtonDown(MOUSE_BUTTON_LEFT))
-    {
-        return true;
-    }
-
-    return false;
-}
-
-enum ButtonState {
-    BTN_NORMAL,
-    BTN_HOVER,
-    BTN_PRESSED
-};
-
-ButtonState get_button_state(const Button& button)
+Button::ButtonState get_button_state(const Button& button)
 {
     Vector2 mouse_pos = GetMousePosition();
     bool hover = is_hover(button, mouse_pos);
     bool pressed = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
     
-    if (hover && pressed) return BTN_PRESSED;
-    if (hover) return BTN_HOVER;
-    return BTN_NORMAL;
+    if (!lock_btn && hover && pressed) return Button::ButtonState::BTN_PRESSED;
+    if (lock_btn && hover) return Button::ButtonState::BTN_LOCKED;
+    if (hover) return Button::ButtonState::BTN_HOVER;
+    return Button::ButtonState::BTN_NORMAL;
 }
 
-void draw_button(const Button& button, const char* text, ButtonState state)
+void draw_button(const Button& button, const char* text, Button::ButtonState state)
 {
     Color bg_color;
     switch (state) {
-        case BTN_NORMAL:  bg_color = WHITE; break;
-        case BTN_HOVER:   bg_color = GRAY; break;
-        case BTN_PRESSED: bg_color = (Color){0, 0, 0, 128}; break;
+        case Button::ButtonState::BTN_NORMAL:  bg_color = WHITE; break;
+        case Button::ButtonState::BTN_HOVER:   bg_color = GRAY; break;
+        case Button::ButtonState::BTN_PRESSED: bg_color = (Color){0, 0, 0, 128}; break;
+        case Button::ButtonState::BTN_LOCKED:  bg_color = (Color){200, 50, 50, 200}; break;
         default:          bg_color = WHITE; break;
     }
     
@@ -140,15 +138,14 @@ void draw_text()
     DrawText(text, text_x, text_y, text_font, text_color);
 }
 
-void draw_paused()
+void draw_message(const std::string& msg)
 {
-    static std::string game_stat = "paused";
     Color message_color = RED;
     int font_size = WINDOW_HEIGHT / 8;
-    int text_width = MeasureText(game_stat.c_str(), font_size);
+    int text_width = MeasureText(msg.c_str(), font_size);
     int x = (WINDOW_WIDTH - text_width) / 2;
     int y = (WINDOW_HEIGHT  - font_size) / 2;
-    DrawText(game_stat.c_str(), x, y, font_size, message_color);
+    DrawText(msg.c_str(), x, y, font_size, message_color);
 }
 
 void update_game_stat()
@@ -156,45 +153,77 @@ void update_game_stat()
     // 倒计时读秒
     if(passed_seconds(1))
     {
-        curr_count--;
+        if(curr_count > 0)
+        {
+            curr_count--;
+        }
+        else
+        {
+            running = false;
+        }
     }
 
     // 按下按钮
-    if(button_clicked(btn_start))
+
+    if(get_button_state(btn_start) == Button::ButtonState::BTN_PRESSED)
     {
         running = true;
     }
-    else if(button_clicked(btn_pause))
+    else if(get_button_state(btn_pause) == Button::ButtonState::BTN_PRESSED)
     {
         running = false;
     }
-    else if(button_clicked(btn_reset))
+    else if(get_button_state(btn_reset) == Button::ButtonState::BTN_PRESSED)
     {
         running = false;
-        reset = true;
         curr_count = time_out;
     }
 }
 
+bool any_button_state(Button::ButtonState button_state)
+{
+    for(const auto& btn : btns)
+    {
+        auto state = get_button_state(btn);
+        if(state == button_state)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 void update_ui()
 {
+    constexpr size_t BTN_COUNT = sizeof(btns) / sizeof(btns[0]);
+
+    bool any_locked = false;
+    Button::ButtonState btn_states[BTN_COUNT];
+    
+    for(int i = 0; i < BTN_COUNT; ++i)
+    {
+        Button::ButtonState stat = get_button_state(btns[i]);
+        btn_states[i] = stat;
+        if(stat == Button::ButtonState::BTN_LOCKED)
+        {
+            any_locked = true;
+        }
+    }
+
     draw_text();
 
     if(!running)
     {
-        draw_paused();
+        draw_message("Paused");
+    }
+    else if(any_locked)
+    {
+        draw_message("Buttons Locked");
     }
     
-    struct ButtonData { const Button& btn; const char* label; };
-    ButtonData btns[] = {
-        {btn_start, "start"},
-        {btn_pause, "pause"},
-        {btn_reset, "reset"}
-    };
-    
-    for (const auto& data : btns) {
-        ButtonState state = get_button_state(data.btn);
-        draw_button(data.btn, data.label, state);
+    for (int i = 0; i < BTN_COUNT; ++i) 
+    {
+        draw_button(btns[i], btns[i].label_.c_str(), btn_states[i]);
     }
 }
 
@@ -217,11 +246,13 @@ int main(int argc, char const *argv[])
             {
                 ClearWindowState(FLAG_WINDOW_UNDECORATED); // 恢复标题栏
                 ClearWindowState(FLAG_WINDOW_TOPMOST);     // 取消窗口置顶
+                lock_btn = false;
             }
             else
             {
                 SetWindowState(FLAG_WINDOW_UNDECORATED);   // 隐藏标题栏
                 SetWindowState(FLAG_WINDOW_TOPMOST);       // 窗口置顶
+                lock_btn = true;
             }
         }
 

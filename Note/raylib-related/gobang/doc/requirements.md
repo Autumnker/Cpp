@@ -6,7 +6,7 @@
 
 ## 技术栈要求
 - **语言标准**: C++17 (gnu++17)
-- **图形库**: Raylib 5.5 (Windows 64位，MinGW-w64 版本)
+- **图形库**: Raylib 6.0 (Windows 64位，MinGW-w64 版本)
 - **构建工具**: CMake 3.10+
 - **编译器**: MinGW-w64 (gcc/g++)
 - **平台**: Windows 64位
@@ -59,18 +59,9 @@ gobang/
 │   ├── player.hpp
 │   ├── ui.hpp
 │   └── utils.hpp
-├── lib/                    # 第三方库
+├── lib/                    # 第三方库（CSV 解析）
 │   └── fast-cpp-csv-parser/
 │       └── csv.h           # CSV 解析器（单头文件）
-│   └── raylib-5.5_win64_mingw-w64/
-│       ├── include/
-│       │   ├── raylib.h
-│       │   ├── raymath.h
-│       │   └── rlgl.h
-│       └── lib/
-│           ├── libraylib.a
-│           ├── libraylibdll.a
-│           └── raylib.dll
 ├── src/                    # 源文件 (.cpp)
 │   ├── main.cpp
 │   ├── chess.cpp
@@ -81,6 +72,8 @@ gobang/
     └── games.csv
 ```
 
+> Raylib 6.0 为共享依赖，位于上级目录 `../lib/raylib-6.0_win64_mingw-w64/`（与 `maze/` 共用），不在本项目 `lib/` 内。
+
 ## CMake 配置要求
 
 ```cmake
@@ -90,8 +83,8 @@ project(gobang)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 设置库路径
-set(RAYLIB_DIR ${CMAKE_SOURCE_DIR}/lib/raylib-5.5_win64_mingw-w64)
+# 设置库路径（raylib 6.0 为共享依赖，位于上级 lib/）
+set(RAYLIB_DIR ${CMAKE_SOURCE_DIR}/../lib/raylib-6.0_win64_mingw-w64)
 
 # 包含目录
 include_directories(

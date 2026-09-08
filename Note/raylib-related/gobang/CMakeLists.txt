@@ -9,7 +9,7 @@ set(CMAKE_CXX_EXTENSIONS ON)
 add_compile_options(-finput-charset=UTF-8 -fexec-charset=UTF-8)
 
 # 设置库路径
-set(RAYLIB_DIR ${CMAKE_SOURCE_DIR}/lib/raylib-5.5_win64_mingw-w64)
+set(RAYLIB_DIR ${CMAKE_SOURCE_DIR}/../lib/raylib-6.0_win64_mingw-w64)
 
 # 包含目录
 include_directories(
@@ -40,11 +40,22 @@ target_link_libraries(gobang
 # 解决 mingw 下 __declspec(dllimport) 警告
 target_compile_definitions(gobang PRIVATE RAYLIB_DLL)
 
-# 复制 DLL 到输出目录
+# 复制 raylib DLL 到输出目录
 add_custom_command(TARGET gobang POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
     ${RAYLIB_DIR}/lib/raylib.dll
     $<TARGET_FILE_DIR:gobang>
+)
+
+# 复制 MinGW 运行时 DLL 到可执行文件旁（与编译工具链 GCC 版本一致）
+# 避免运行时因 PATH 顺序加载到 Git 等其它目录里的旧版 libstdc++-6.dll 而崩溃
+get_filename_component(MINGW_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+add_custom_command(TARGET gobang POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${MINGW_BIN_DIR}/libstdc++-6.dll
+        ${MINGW_BIN_DIR}/libgcc_s_seh-1.dll
+        ${MINGW_BIN_DIR}/libwinpthread-1.dll
+        $<TARGET_FILE_DIR:gobang>
 )
 
 # 创建 data 目录

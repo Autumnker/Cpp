@@ -7,7 +7,7 @@
 - **编译器**: MinGW-w64 (gcc/g++)
 - **CMake**: 3.10+
 - **系统**: Windows 64位
-- **依赖**: Raylib 5.5 (已内置在 `lib/` 目录)
+- **依赖**: Raylib 6.0（与 `maze/` 共用，位于上级 `../lib/raylib-6.0_win64_mingw-w64/`）
 
 ## 快速开始
 
@@ -62,14 +62,13 @@ gobang/
 │   ├── ui.cpp                  # 界面实现
 │   └── utils.cpp               # 工具实现
 ├── lib/
-│   ├── fast-cpp-csv-parser/
-│   │   └── csv.h               # CSV 解析库
-│   └── raylib-5.5_win64_mingw-w64/
-│       ├── include/            # Raylib 头文件
-│       └── lib/                # Raylib 库文件
+│   └── fast-cpp-csv-parser/
+│       └── csv.h               # CSV 解析库
 └── data/
     └── games.csv               # 对局历史记录
 ```
+
+> Raylib 6.0 为共享依赖，位于上级目录 `../lib/raylib-6.0_win64_mingw-w64/`（与 `maze/` 共用，含 `include/`、`lib/`）。
 
 ## 功能特性
 

@@ -98,7 +98,7 @@ graph TD
 
 ## 构建与运行
 
-环境要求：`g++`（MinGW，需在 `PATH` 中）+ raylib 6.0（已内置在 `lib/`）。
+环境要求：`g++`（MinGW，需在 `PATH` 中）+ raylib 6.0（与 `gobang/` 共用上级 `lib/`，位于 `..\lib\raylib-6.0_win64_mingw-w64\`）。
 
 ```bat
 build.bat        :: 编译，生成 maze.exe
@@ -110,8 +110,8 @@ build.bat        :: 编译，生成 maze.exe
 ```bat
 g++ main.cpp core\*.cpp render\*.cpp input\*.cpp clock\*.cpp app\*.cpp common\*.cpp ^
 -I core -I render -I input -I clock -I app -I common ^
--I .\lib\raylib-6.0_win64_mingw-w64\include\ ^
--L .\lib\raylib-6.0_win64_mingw-w64\lib\ ^
+-I ..\lib\raylib-6.0_win64_mingw-w64\include\ ^
+-L ..\lib\raylib-6.0_win64_mingw-w64\lib\ ^
 -lraylib -lopengl32 -lgdi32 -lwinmm -o maze
 ```
 
