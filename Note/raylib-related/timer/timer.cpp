@@ -12,7 +12,7 @@
 #define WINDOW_HEIGHT (1080 / 5)
 #define TARGET_FPS 60
 
-static int time_out = 600;
+static int time_out = 1500;
 static int curr_count = time_out;
 static bool running = false;
 static bool lock_btn = false;
@@ -237,6 +237,7 @@ int main(int argc, char const *argv[])
 
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE);
     SetTargetFPS(TARGET_FPS);
+    SetExitKey(KEY_NULL);   // 默认按键"ESC"不退出
     
     while(!WindowShouldClose())
     {
