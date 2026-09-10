@@ -1,5 +1,5 @@
 /**
- * 计时器 - Cyber 风格 - 响应式布局 + 可拖拽调整大小
+ * 计时器 - Cyber 风格 - 响应式布局 + 拖拽调整大小 + 滚轮等比缩放
  */
 
 #include <utility>
@@ -56,6 +56,8 @@ struct Layout
     Rectangle input_box;
     Rectangle buttons[3];
     Rectangle resize_handle;
+    float content_center_y;    // 输入框 / 倒计时共享的垂直中心
+    float message_center_y;    // 消息的垂直中心（顶部）
     int input_font_size;
     int button_font_size;
     int label_font_size;
@@ -65,38 +67,43 @@ struct Layout
     static Layout compute(int w, int h)
     {
         Layout l{};
+        const float fw = (float)w;
+        const float fh = (float)h;
 
-        // 输入框：宽 60%，高 20%（修复：原 12% 太矮导致文字被裁剪）
-        const float input_w = w * 0.60f;
-        const float input_h = h * 0.20f;
-        l.input_box = { (w - input_w) / 2.0f,
-                        h * 0.22f - input_h / 2.0f,
-                        input_w, input_h };
-        // raygui 字体大小：不超过输入框高度的 70%，且不超过 24
-        l.input_font_size = std::min(static_cast<int>(input_h * 0.70f), 24);
-        l.label_font_size = std::max(10, static_cast<int>(input_h * 0.55f));
+        // ── 输入框 / 倒计时：整体视觉中心
+        //    稍高于画布正中（0.44h），为顶部标签和底部按钮留出呼吸感
+        const float input_w  = fw * 0.60f;
+        const float input_h  = fh * 0.22f;
+        const float input_cy = fh * 0.44f;
+        l.content_center_y = input_cy;
+        l.input_box = {
+            (fw - input_w) / 2.0f,
+            input_cy - input_h / 2.0f,
+            input_w, input_h
+        };
 
-        // 倒计时数字
+        l.input_font_size = std::min((int)(input_h * 0.60f), 22);
+        l.label_font_size = std::max(10, (int)(input_h * 0.48f));
         l.timer_font_size = h / 4;
 
-        // 按钮：3 个等宽，间距 3%
-        const float btn_w = w * 0.27f;
-        const float btn_h = h * 0.20f;
-        const float gap   = w * 0.03f;
-        const float total = btn_w * 3 + gap * 2;
-        const float start_x = (w - total) / 2.0f;
-        const float btn_y   = h * 0.70f;
-
+        // ── 按钮：输入框下方，与输入框保持自然间距
+        const float btn_w   = fw * 0.27f;
+        const float btn_h   = fh * 0.20f;
+        const float gap     = fw * 0.03f;
+        const float total   = btn_w * 3.0f + gap * 2.0f;
+        const float start_x = (fw - total) / 2.0f;
+        const float btn_y   = l.input_box.y + input_h + fh * 0.08f;
         for (int i = 0; i < 3; ++i)
             l.buttons[i] = { start_x + i * (btn_w + gap), btn_y, btn_w, btn_h };
-        l.button_font_size = std::max(10, static_cast<int>(btn_h * 0.38f));
+        l.button_font_size = std::max(10, (int)(btn_h * 0.38f));
 
-        // 状态消息
+        // ── 状态消息：顶部区域（避免与倒计时数字重叠）
         l.message_font_size = h / 8;
+        l.message_center_y  = fh * 0.12f;
 
-        // 右下角 resize 手柄（正方形，边长 = min(w,h) 的 6%，最小 12px）
-        const float hs = std::max(12.0f, std::min(w, h) * 0.06f);
-        l.resize_handle = { w - hs, h - hs, hs, hs };
+        // ── 右下角缩放手柄
+        const float hs = std::max(12.0f, std::min(fw, fh) * 0.06f);
+        l.resize_handle = { fw - hs, fh - hs, hs, hs };
 
         return l;
     }
@@ -162,12 +169,11 @@ struct App
 
     // resize 状态
     bool    resizing          = false;
-    Vector2 resize_anchor_g   = { 0, 0 };   // 全局鼠标锚点
-    Vector2 resize_anchor_sz  = { 0, 0 };   // 拖动开始时的窗口尺寸
+    Vector2 resize_anchor_g   = { 0, 0 };
+    Vector2 resize_anchor_sz  = { 0, 0 };
 };
 
 // ==================== 鼠标工具 ====================
-// 全局鼠标位置 = 窗口位置 + 窗口内鼠标位置
 static Vector2 get_global_mouse()
 {
     const Vector2 wp = GetWindowPosition();
@@ -178,7 +184,6 @@ static Vector2 get_global_mouse()
 // ==================== 窗口大小拖拽 ====================
 static void handle_resize(App& app, const Layout& layout)
 {
-    // 锁定时彻底关闭拖拽，并复位状态
     if (app.locked)
     {
         app.resizing = false;
@@ -216,6 +221,50 @@ static void handle_resize(App& app, const Layout& layout)
             app.resizing = false;
         }
     }
+}
+
+// ==================== 滚轮等比缩放 ====================
+static void handle_zoom(App& app)
+{
+    if (app.locked || app.resizing) return;
+
+    const float wheel = GetMouseWheelMove();
+    if (wheel == 0.0f) return;
+
+    const int w = GetScreenWidth();
+    const int h = GetScreenHeight();
+
+    const float factor = (wheel > 0.0f) ? 1.10f : (1.0f / 1.10f);
+
+    // 初始固定比例
+    constexpr float kBaseAspect =
+        static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT);
+
+    // 最小尺寸（宽、高独立下限）
+    constexpr int kMinW = 1920 / 12;
+    constexpr int kMinH = 1080 / 12;
+
+    // 按比例推算出"同时满足 MIN_W 和 MIN_H"的最小宽度
+    const float min_w = std::max(static_cast<float>(kMinW),
+                                 static_cast<float>(kMinH) * kBaseAspect);
+
+    // 以宽度为基准缩放
+    int new_w = static_cast<int>(w * factor);
+    if (new_w < static_cast<int>(min_w))
+        new_w = static_cast<int>(min_w);
+
+    // 高度由宽度和比例唯一决定，天然保持比例
+    int new_h = static_cast<int>(new_w / kBaseAspect);
+
+    if (new_w == w && new_h == h) return;
+
+    // 保持窗口中心不动
+    const Vector2 win_pos = GetWindowPosition();
+    const int new_x = static_cast<int>(win_pos.x + (w - new_w) / 2.0f);
+    const int new_y = static_cast<int>(win_pos.y + (h - new_h) / 2.0f);
+
+    SetWindowSize(new_w, new_h);
+    SetWindowPosition(new_x, new_y);
 }
 
 // ==================== 输入处理 ====================
@@ -263,11 +312,17 @@ static void update_logic(App& app, const Layout& layout)
 
     if (is_button_clicked(layout, 0))         // START
     {
-        app.input_edit       = false;
-        app.timer.time_out   = app.input_value;
-        app.timer.curr_count = app.timer.time_out;
-        app.timer.running    = true;
-        app.show_input       = false;
+        if (app.show_input || app.timer.curr_count == 0)
+        {
+            // 全新开始：从输入框取新值
+            app.input_edit       = false;
+            app.timer.time_out   = app.input_value;
+            app.timer.curr_count = app.timer.time_out;
+            app.show_input       = false;
+        }
+        // 否则：从暂停恢复，curr_count 保持不变
+
+        app.timer.running = true;
     }
     else if (is_button_clicked(layout, 1))    // PAUSE
     {
@@ -308,14 +363,15 @@ static void render_button(const App& app, const Layout& layout, int idx)
 
 static void render_input(App& app, const Layout& layout)
 {
-    // 标签
+    // 标签：贴在输入框上方，间距约为标签高度的 30%
     const char* label = "TIMEOUT";
     const int lf = layout.label_font_size;
     const int lx = static_cast<int>(layout.input_box.x);
-    const int ly = static_cast<int>(layout.input_box.y - lf - 4);
+    const int ly = static_cast<int>(
+        layout.input_box.y - lf - layout.input_box.height * 0.20f);
+
     DrawText(label, lx, ly, lf, app.theme.text_secondary);
 
-    // raygui 输入框，TEXT_SIZE 与输入框高度同步
     GuiSetStyle(DEFAULT, TEXT_SIZE, layout.input_font_size);
     if (GuiValueBox(layout.input_box, nullptr, &app.input_value, 1, 9999, app.input_edit))
         app.input_edit = !app.input_edit;
@@ -326,8 +382,9 @@ static void render_timer(const App& app, const Layout& layout)
     const char* text = TextFormat("%d", app.timer.curr_count);
     const int font_size = layout.timer_font_size;
     const int text_w    = MeasureText(text, font_size);
-    const int x = (GetScreenWidth()  - text_w) / 2;
-    const int y = (GetScreenHeight() / 2 - font_size) / 2;
+    const int x = (GetScreenWidth() - text_w) / 2;
+    const int y = static_cast<int>(layout.content_center_y - font_size / 2.0f);
+
     DrawText(text, x, y, font_size, app.theme.text_primary);
 }
 
@@ -335,26 +392,29 @@ static void render_message(const App& app, const Layout& layout, const char* msg
 {
     const int font_size = layout.message_font_size;
     const int text_w    = MeasureText(msg, font_size);
-    const int x = (GetScreenWidth()  - text_w) / 2;
-    const int y = (GetScreenHeight() - font_size) / 2;
+    const int x = (GetScreenWidth() - text_w) / 2;
+    const int y = static_cast<int>(layout.message_center_y - font_size / 2.0f);
+
     DrawText(msg, x, y, font_size, app.theme.message);
 }
 
 static void render_resize_handle(const App& app, const Layout& layout)
 {
-    if (app.locked) return;   // 锁定时隐藏
+    if (app.locked) return;
 
     const Rectangle r = layout.resize_handle;
-
-    // 三条斜线作为视觉提示
     constexpr int kLines = 3;
     const float step = r.width / (kLines + 1);
+
+    const bool hovered = CheckCollisionPointRec(GetMousePosition(), r);
+    const Color color = hovered ? app.theme.message : app.theme.handle;
+
     for (int i = 1; i <= kLines; ++i)
     {
         const float off = step * i;
-        DrawLineEx({ r.x + off,               r.y + r.height },
-                   { r.x + r.width,           r.y + off },
-                   1.5f, app.theme.handle);
+        DrawLineEx({ r.x + off,     r.y + r.height },
+                   { r.x + r.width, r.y + off },
+                   1.5f, color);
     }
 }
 
@@ -400,7 +460,7 @@ int main(int argc, char const *argv[])
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE);
     SetTargetFPS(TARGET_FPS);
     SetExitKey(KEY_NULL);
-    SetWindowState(FLAG_WINDOW_RESIZABLE);   // 允许窗口被调整
+    SetWindowState(FLAG_WINDOW_RESIZABLE);
 
     GuiLoadStyle("..\\lib\\raygui-5.0\\styles\\cyber\\style_cyber.rgs");
 
@@ -418,6 +478,7 @@ int main(int argc, char const *argv[])
 
         handle_input(app);
         handle_resize(app, layout);
+        handle_zoom(app);              // ← 新增：滚轮等比缩放
         update_logic(app, layout);
 
         BeginDrawing();
