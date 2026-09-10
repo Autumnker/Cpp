@@ -4,6 +4,8 @@ windres resources\app.rc -O coff -o app.res.o
 g++ timer.cpp app.res.o ^
 -I .\ ^
 -I ..\lib\raylib-6.0_win64_mingw-w64\include\ ^
+-I ..\lib\raygui-5.0\src ^
+-I ..\lib\raygui-5.0\icons ^
 -L ..\lib\raylib-6.0_win64_mingw-w64\lib\ ^
 -lraylib -lopengl32 -lgdi32 -lwinmm ^
 -mwindows ^
