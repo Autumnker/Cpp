@@ -155,12 +155,76 @@ private:
     }
 };
 
+// ==================== 到时提醒音 ====================
+// 倒计时归零后持续提醒：立即响一声，此后每 interval 秒再响一声。
+// 音频设备不可用时静默降级（不加载、不响，也不影响计时功能）。
+class DingNotifier
+{
+public:
+    explicit DingNotifier(float interval_seconds = 3.0f)
+        : interval_(std::chrono::duration_cast<Clock::duration>(
+              std::chrono::duration<float>(interval_seconds))) {}
+
+    void load(const char* path)
+    {
+        if (!IsAudioDeviceReady()) return;
+
+        ding_   = LoadSound(path);
+        loaded_ = IsSoundValid(ding_);
+    }
+
+    void unload()
+    {
+        if (!loaded_) return;
+        active_ = false;
+        UnloadSound(ding_);
+        loaded_ = false;
+    }
+
+    // 幂等：每帧调用也只会在进入提醒状态的那一帧播第一声
+    // start 内部立即播一声，后续由 update 按 interval_ 续播
+    void start()
+    {
+        if (active_) return;
+
+        active_ = loaded_;
+        if (!active_) return;
+        PlaySound(ding_);
+        next_ding_ = Clock::now() + interval_;
+    }
+
+    void stop() { active_ = false; }
+
+    bool active() const { return active_; }
+
+    void update()
+    {
+        if (!active_) return;
+
+        const Clock::time_point now = Clock::now();
+        if (now < next_ding_) return;
+
+        PlaySound(ding_);
+        next_ding_ = now + interval_;
+    }
+
+private:
+    using Clock = std::chrono::steady_clock;
+
+    Sound             ding_{};
+    bool              loaded_     = false;
+    bool              active_     = false;
+    Clock::duration   interval_;
+    Clock::time_point next_ding_{};
+};
+
 // ==================== 应用状态 ====================
 struct App
 {
     Timer  timer;
     Button buttons[3] = { Button("START"), Button("PAUSE"), Button("RESET") };
     Theme  theme = Theme::cyber();
+    DingNotifier ding;
 
     bool locked      = false;
     bool show_input  = true;
@@ -308,6 +372,12 @@ static bool is_button_held(const Layout& layout, int idx)
 static void update_logic(App& app, const Layout& layout)
 {
     app.timer.update();
+
+    // 倒计时归零 → 进入提醒状态；START/RESET 使计数恢复正数后自动退出
+    if (app.timer.curr_count == 0) app.ding.start();
+    else                           app.ding.stop();
+    app.ding.update();
+
     if (app.locked) return;
 
     if (is_button_clicked(layout, 0))         // START
@@ -462,6 +532,9 @@ int main(int argc, char const *argv[])
     SetExitKey(KEY_NULL);
     SetWindowState(FLAG_WINDOW_RESIZABLE);
 
+    InitAudioDevice();
+    app.ding.load("resources\\ding.mp3");
+
     GuiLoadStyle("..\\lib\\raygui-5.0\\styles\\cyber\\style_cyber.rgs");
 
     Image icon = LoadImage("resources\\icon_timer.png");
@@ -486,6 +559,9 @@ int main(int argc, char const *argv[])
         render(app, layout);
         EndDrawing();
     }
+
+    app.ding.unload();
+    CloseAudioDevice();
 
     return 0;
 }
